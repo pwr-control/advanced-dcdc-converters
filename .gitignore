@@ -1,0 +1,127 @@
+# ============================================================
+# .gitignore — C · MATLAB · LaTeX · KiCad
+# ============================================================
+
+# ============================================================
+# C / C++
+# ============================================================
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.d
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.out
+*.i
+*.s
+
+# Build directories
+build/
+out/
+Debug/
+Release/
+
+# IDE / toolchain artifacts
+*.su          # GCC stack usage
+*.cyclo
+*.deps
+
+# ============================================================
+# MATLAB
+# ============================================================
+*.asv         # auto-save
+*.m~
+*.mex*        # compiled MEX (mexw64, mexw32, mexa64 …)
+*.slxc        # Simulink code-gen cache
+*.autosave
+*.mdlp
+*.mat
+codegen/      # Simulink Coder / Embedded Coder output
+slprj/        # Simulink project build folder
+work/
+
+# ============================================================
+# LaTeX
+# ============================================================
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.ist
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.vrb
+*.xdv
+
+# Output — rimuovi se vuoi tracciare il PDF finale
+*.pdf
+
+# ============================================================
+# KiCad
+# ============================================================
+# Backup & auto-save
+*.bak
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*-backups/
+_autosave-*
+
+# Fabrication outputs (aggiungili se non vuoi tracciarli)
+gerbers/
+fab/
+*.gbr
+*.drl
+*.gbl
+*.gtl
+*.gbs
+*.gts
+*.gbo
+*.gto
+*.gml
+*.dxf
+*.pos
+*.rpt
+*.csv
+
+# SPICE / simulation
+*.net
+*.cir
+*.raw
+
+# FP library cache (rigenerato automaticamente)
+fp-info-cache
+
+# ============================================================
+# Editor & OS junk
+# ============================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
