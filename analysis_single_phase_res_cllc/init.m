@@ -53,7 +53,7 @@ fprintf('Lr   = %.4f uH\n',    Lr*1e6);
 fprintf('Cr   = %.2f nF\n',    Cr*1e9);
 fprintf('Lm   = %.4f uH\n',    Lm*1e6);
 fprintf('m    = %.2f (Lm/Lr)\n', m);
-fprintf('Phase shift = %.1f deg\n', Phase_shift*180/pi);
+fprintf('Phase shift = %.1f deg\n', phase_shift*180/pi);
 fprintf('================================\n\n');
 
 Delta = Lr1*Lr2 + Lr1*Lm + Lr2*Lm;

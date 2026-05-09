@@ -180,6 +180,7 @@ application_voltage = 690;
 grid_nominal_current = grid_nominal_power/application_voltage/sqrt(3);
 
 % Transformer Dyn11
+delta_star = 1;
 
 if application_voltage == 690
     % trafo data
@@ -218,7 +219,7 @@ end
 eq_grid_inductance = Lgrid_base*ucc_factor; % [H]
 eq_grid_resistance = 2e-3; % [Ohm]
 
-grid_emu = grid_three_phase_emulator('Dyn11', grid_nominal_power, application_voltage, us1, us2, fgrid, ...
+grid_emu = grid_three_phase_emulator('Dyn11', delta_star, grid_nominal_power, application_voltage, us1, us2, fgrid, ...
                 eq_grid_inductance, eq_grid_resistance, eta, ucc, i1m, p_iron, n1, n2, core_area, core_length, mur, ...
                 up_xi_pu_ref, up_eta_pu_ref, un_xi_pu_ref, un_eta_pu_ref);
 
@@ -319,7 +320,33 @@ else
     i_react_pos_ref_2 = 0;
     i_react_pos_ref_3 = 0;
 end
-%[text] #### 
+%[text] #### UPQC Series Transformer
+name = 'UPQC Series Transformer';
+pwr_nom = 250e3;
+u1_nom = 690;
+u2_nom = 690;
+f_nom = 50;
+eta = 98;
+ucc = 2;
+p_iron = 5e3;
+n2 = 8;
+n1 = 8;
+core_area = 0.04;
+core_length = 0.25;
+mur = 35e3;
+
+Lm1 = (n1^2 * mu0 * mur * core_area) / core_length;
+i1m = u1_nom/sqrt(3)/Lm1/f_nom/2/pi;
+
+delta_star = 0;
+
+upqc_st = three_phase_transformer_setup(name, delta_star, pwr_nom, u1_nom, u2_nom, f_nom, eta, ucc, ...
+    i1m, p_iron, n1, n2, core_area, core_length, mur);
+upqc_st.Lm1
+upqc_st.Ld1
+upqc_ctrl.kp = 2;
+upqc_ctrl.ki = 18;
+upqc_ctrl.lim = 4;
 %[text] #### DClink Lstray model (partial loop inductance)
 parasitic_dclink_data;
 %%
@@ -354,7 +381,7 @@ psm_ctrl.ki_i = 35;
 im_ctrl = ctrl_im_setup(glb_time.ts_inv, im.omega_bez, u_im_scale, im.Jm_norm);
 im_ctrl.ekf = ekf_im_setup(im.alpha_norm, im.beta_norm, im.gamma_norm, im.sigma_norm, ...
         im.mu_norm, im.Lm_norm, im.Jm_norm, glb_time.ts_inv);
-%[text] #### AFE control (sequences)
+%[text] #### AFE control (with sequences)
 afe_ctrl = ctrl_afe_setup(glb_time.ts_afe, grid_emu.omega_grid_nom);
 
 kp_udc = 0.5;

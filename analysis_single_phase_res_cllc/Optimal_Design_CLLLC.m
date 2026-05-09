@@ -381,4 +381,4 @@ ub = [300e-6, 30e-6];     % [Lm_max, Lr_max]
 
 param_opt = optimization(Lm_init, Lr_init, lb, ub, wr, I_ref, fs, U1, U2, R1, R2, Psw_model, Pnom, coredata);
 eval(param_opt, wr, I_ref, fs, U1, U2, R1, R2, Psw_model, Pnom, coredata);
-param_opt(1)/param_opt(2)
+% param_opt(1)/param_opt(2)
