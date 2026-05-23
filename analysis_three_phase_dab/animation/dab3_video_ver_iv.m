@@ -2,7 +2,7 @@
 
 close all; clc;
 clear; 
-load ../sim_results/sim_results_2;
+load ../sim_results/sim_results_3;
 
 % -----------------------------------------------------------------------
 %  PARAMETRI UTENTE

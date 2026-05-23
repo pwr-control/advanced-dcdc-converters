@@ -391,8 +391,8 @@ psfbc_ctrl.kp_idc = 1;
 dab_ctrl.ki_udc = 35;
 
 % DAB3 control setting
-dab_ctrl.kp_idc = 0.1;
-dab_ctrl.ki_idc = 2.0;
+dab_ctrl.kp_idc = 0.02;
+dab_ctrl.ki_idc = 1.0;
 %[text] #### Resonant PI settings
 pres_ctrl.kp_rpi = 0.75;
 pres_ctrl.ki_rpi = 45;
