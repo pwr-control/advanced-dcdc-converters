@@ -33,7 +33,7 @@ fontsize_legend = 14;
 fontsize_axis = 12;
 
 fps         = 100;                      % frame al secondo del video
-slowdown    = 10;                        % fattore di rallentamento
+slowdown    = 20;                        % fattore di rallentamento
 dt_frame    = 1 / (fps * slowdown);     % 2ms invece di 10ms
 video_file  = 'dab3.mp4';
 
