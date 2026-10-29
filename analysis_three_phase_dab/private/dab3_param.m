@@ -1,20 +1,26 @@
-function dab3 = dab3_param()
+function dab3 = dab3_param(bench_case)
 %DAB3_PARAM  Numbers of the three-phase DAB (DAB3): 1200 V -> 1200 V, 250 kW, n = 1, fs = 10 kHz.
 %
 %   dab3 = dab3_param()
+%   dab3 = dab3_param(bench_case)
 %
 %   Returns the DAB3 part of "param" used by init_model.m: pwr_nom, fs, .pwm (inputs of the timing
 %   object), .hw_in (the inputs of hw_dab_three_phase_setup), .tank (series inductance of the sizing,
 %   written over the one that the class derives), .mod (modulator limit and feed-forward), .ctrl_in (PI
-%   gains), .bench (current reference of the run). Being in ./private it is seen only by the files of
-%   this folder.
+%   gains), .bench (current reference and initial state of charge of the batteries). bench_case selects
+%   the bench: 'forward' (default), 'reverse', 'light', 'mismatch' (see the bench section below). Being in
+%   ./private it is seen only by the files of this folder.
 %
 %   The sizing is in ../dab3_sizing.md: three single-phase transformers in star-star (floating star
 %   points), six-step modulation of both bridges, phase-shift control (De Doncker), 2 kV SiC MOSFET
 %   half-bridge modules on both bridges. Values marked "TBC" are placeholders of the first run, to be
 %   confirmed with the hardware.
 %
-%   Rev. 01, 2026-10-29.
+%   Rev. 02, 2026-10-29: bench cases (Rev. 01: first sizing).
+
+    if nargin < 1 || isempty(bench_case)
+        bench_case = 'forward';
+    end
 
     % ------------------------------------------------------------------ operating point and PWM
     dab3.pwr_nom = 250e3;                       % [W] nominal power, both directions
@@ -104,26 +110,46 @@ function dab3 = dab3_param()
                                                 % control, u_ff = k_ff * i_ref): 30 deg at 1 pu
 
     % ------------------------------------------------------------------ control (library pi_ctrl, ts = ts_dab)
-    % Current loop on the battery current of side 1 (current_battery_1, behind the DC choke), normalized by
-    % idc1. The bridge DC current (dab_current_input_modA) has the six-pulse ripple at 60 kHz: one sample per
-    % PWM period always sees the same point of it, +14 % of bias at nominal. Plant d(i_pu)/du = 1.9 at the
-    % nominal point; the LC of the DC side (250 uH, 500 uF, 450 Hz, damped by the battery resistance) limits
-    % the bandwidth: kp = 0.01, ki = 60 give 18 Hz, PM 90 deg, GM 14 dB (averaged model, sizing Sec. 7). The
-    % feed-forward does the tracking, the integrator removes the static error.
+    % Current loop on the DC input current of side 1 (dab_current_input_modA: the current of the DC choke where
+    % it enters the DC link; the capacitor carries the six-pulse ripple, this current has none), normalized by
+    % idc1. Plant d(i_pu)/du = 1.9 at the nominal point; the LC of the DC side (250 uH, 500 uF, 450-500 Hz,
+    % damped by the battery resistance) limits the bandwidth: kp = 0.01, ki = 60 give 18 Hz, PM 90 deg, GM 14 dB
+    % (averaged model, sizing Sec. 7). The feed-forward does the tracking, the integrator removes the static
+    % error. Run 01: 208.4 A at 1 pu (208.3 A).
     dab3.ctrl_in.kp_idc = 0.01;
     dab3.ctrl_in.ki_idc = 60;
     dab3.ctrl_in.kp_udc = 0.5;                  % output voltage loop (Vout Ctrl): not active, the Variant Source of
     dab3.ctrl_in.ki_udc = 35;                   % the control selects the current reference of the bench
 
     % ------------------------------------------------------------------ bench: current reference (pu of idc1)
-    % battery_1 on side 1, battery_2 on side 2; the current loop sets the battery current of side 1:
+    % battery_1 on side 1, battery_2 on side 2; the current loop sets the DC input current of side 1:
     % 0 until t_on, then i_ref1, from t_rev i_ref2, through the rate limiter of the control (r_rise, r_fall).
-    % Default: reverse power first (side 2 -> side 1, -1 pu), then the reversal to forward power (+1 pu,
-    % side 1 -> side 2) that lasts to the end of the run, where the logged window is (param.time.t_measure).
+    % i_ref2 lasts to the end of the run, where the logged window is (param.time.t_measure). Cases:
+    %   'forward'   -1 pu (side 2 -> side 1), then the reversal to +1 pu (side 1 -> side 2): run 01
+    %   'reverse'   +1 pu, then the reversal to -1 pu
+    %   'light'     -1 pu, then +0.1 pu: switching currents set by the magnetizing current
+    %   'mismatch'  battery_2 at soc 0.3 (1184 V open circuit, d = 0.95 at no load), then +0.25 pu: ZVS limit
+    %               of bridge 2 (dab3_sizing.md, Sec. 5)
+    dab3.bench.case = bench_case;
     dab3.bench.t_on = 0.01;                     % [s]
     dab3.bench.i_ref1 = -1;                     % [pu]
     dab3.bench.t_rev = 0.1;                     % [s]
     dab3.bench.i_ref2 = 1;                      % [pu]
     dab3.bench.r_rise = 20;                     % [pu/s] 50 ms for 1 pu, 100 ms for the reversal
     dab3.bench.r_fall = 20;                     % [pu/s]
+    dab3.bench.soc_1 = 0.85;                    % initial state of charge of battery_1 and battery_2 (open circuit
+    dab3.bench.soc_2 = 0.85;                    % voltage 1248 V at 0.85, 1184 V at 0.3)
+    switch bench_case
+        case 'forward'
+        case 'reverse'
+            dab3.bench.i_ref1 = 1;
+            dab3.bench.i_ref2 = -1;
+        case 'light'
+            dab3.bench.i_ref2 = 0.1;
+        case 'mismatch'
+            dab3.bench.i_ref2 = 0.25;
+            dab3.bench.soc_2 = 0.3;
+        otherwise
+            error('dab3_param: unknown bench case "%s" (forward, reverse, light, mismatch)', bench_case);
+    end
 end

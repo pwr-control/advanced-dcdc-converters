@@ -1,6 +1,6 @@
 # DAB3 1200 V ↔ 1200 V, 250 kW: sizing note
 
-Rev. 01, 2026-10-29. Isolated bidirectional DC/DC stage of 250 kW with the three-phase dual active
+Rev. 02, 2026-10-29 (run 01 in Sec. 10). Isolated bidirectional DC/DC stage of 250 kW with the three-phase dual active
 bridge (DAB3): two six-step bridges, three single-phase transformers in star-star with floating star
 points, phase-shift control. The numbers are in `private/dab3_param.m`, the model is
 `three_phase_dab.slx` (see `README.md`). The steady-state figures come from `dab3_analysis.m` (harmonic
@@ -122,15 +122,11 @@ voltage of the batteries (`param.dab3.ic`), the battery blocks too (`battery_vol
 
 ## 7. Control
 
-Current loop on the battery current of side 1 (`current_battery_1`, behind the choke), normalized by
-208 A, PI of the library (`pi_ctrl`, sample time ts_dab = 1/fPWM_DAB = 16.7 µs, the period of the
-trigger), feed-forward u_ff = k_ff · i_ref with k_ff = φ_nom / φ_max = 0.5 (30° at 1 pu, exact at the
-nominal point, about 1° too much at half load).
-
-The old feedback was the bridge DC current (`dab_current_input_modA`): one sample per PWM period at
-the trigger, 30° after the edge of bridge 1, always sees the same point of the six-pulse ripple. The
-sample is 14 % above the mean at full load, 6 % at half load, 3 % at a quarter: the loop would hold
-the mean current 14 % below the reference at full load. The battery current has no 60 kHz ripple.
+Current loop on the DC input current of side 1 (`dab_current_input_modA`: the current of the DC choke
+where it enters the DC link; the capacitor carries the six-pulse ripple, this current has none),
+normalized by 208 A, PI of the library (`pi_ctrl`, sample time ts_dab = 1/fPWM_DAB = 16.7 µs, the
+period of the trigger), feed-forward u_ff = k_ff · i_ref with k_ff = φ_nom / φ_max = 0.5 (30° at 1 pu,
+exact at the nominal point, about 1° too much at half load).
 
 Plant at the nominal point: d(i/208 A)/du = 1.9. The LC of the DC side puts a lightly damped pole pair
 at 450 Hz in the loop and limits the bandwidth. Discrete loop gain (PI, one-sample delay of the
@@ -150,9 +146,15 @@ the error of the feed-forward (5 % at 1 pu on this bench) lasts about a second. 
 (`Vout Ctrl`) is kept but not active (the Variant Source selects the current reference); its gains are
 those of the old model.
 
-Bench reference (`param.dab3.bench`): 0 until 10 ms, −1 pu (power from side 2 to side 1) with a ramp of
-20 pu/s, reversal at 0.1 s to +1 pu (100 ms), forward power at 1 pu from 0.2 s to the end of the run
-(0.3 s); the last 20 ms are logged.
+Bench reference (`param.dab3.bench`, case `forward`): 0 until 10 ms, −1 pu (power from side 2 to
+side 1) with a ramp of 20 pu/s, reversal at 0.1 s to +1 pu (100 ms), forward power at 1 pu from 0.2 s
+to the end of the run (0.3 s); the last 20 ms are logged. The cases `reverse`, `light` and `mismatch`
+end at −1 pu, +0.1 pu and +0.25 pu (the last with battery_2 at soc 0.3), see Sec. 10.
+
+In run 01 the loop holds 208.4 A (reference 208.3 A), with a limit cycle of ±3 A at 500 Hz: the
+modulator rounds φ to whole steps of tc (0.36° at 100 ns, about 1.2 % of the power at 28°), φ toggles
+between two steps and the toggling excites the LC of the DC side. It is the resolution of the model; a
+digital PWM with 1-10 ns of phase resolution would give 0.004-0.04°.
 
 ## 8. Loss budget at 250 kW (estimate)
 
@@ -177,23 +179,52 @@ The turn-off term needs the measured soft turn-off energy of the module at 1200 
   single-phase DAB data (`hwdata.dab`) of the library.
 - Simscape local solver Backward Euler at tc = 100 ns (1000 steps per period, phase resolution
   0.36°, 1 % of the power at 30°), ode23tb with MaxStep tc. 500 ns for quick structural checks.
+- Backward Euler dissipates L/2 · (Δi)² per step in every inductance, that is tc/(2L) · v_L² on average.
+  The leakage inductances carry currents with slopes up to 30 A/µs: in run 01 the numerical damping is
+  0.87 kW in Ld1, Ld2 and 0.05 kW in Lm, more than the physical losses of the model (windings 0.20 kW,
+  cores 0.30 kW, conduction 0.16 kW). It scales with tc (0.45 kW at 50 ns). `dab3_run_check.m`
+  computes it from the logged currents and gives the efficiency without it.
+- The bridges are `three_phase_inverter_mosfet_based_with_thermal_model`: ideal switches with a
+  thermal network. They conduct 13 mA in the off state at 1.2 kV (off-state conductance of the model,
+  about 0.1 kW for the 12 switches). Their `ploss` outputs add Eon and Eoff of the dataset at every
+  edge, as in hard switching (2.7 kW in run 01); the electrical circuit has no switching loss.
 - The transformer flux starts at zero when the bridges start: the magnetizing current has a DC
-  offset of up to about 13 A, which decays with Lm / (R1 ∥ R2'), about 0.9 s. It shifts the switching
-  currents of the rising and falling edges of a leg in opposite directions: average the two edges to
-  read i_sw.
-- The bridges are `three_phase_inverter_mosfet_based_with_thermal_model` (ideal switch with the
-  switching energies of the dataset and a thermal network): with no dead time and no Coss the
-  switching losses that the block computes are not those of a ZVS commutation.
+  offset of up to about 13 A, which decays with Lm / (R1 ∥ R2'), about 0.9 s (run 01: 8 A at 0.3 s). It
+  shifts the switching currents of the rising and falling edges of a leg in opposite directions: average
+  the two edges to read i_sw (`dab3_run_check.m` does).
 
-## 10. Checks to do with the model
+## 10. Checks with the model
 
-1. Forward power at 1 pu (end of the default run): φ, I phase rms/peak, switching currents of both
-   bridges, DC link ripple against Sec. 1-6 (adjusted for the battery voltages, about 1220 V and
-   1280 V at full load).
-2. Reverse power at −1 pu (0.06-0.1 s): same quantities, signs exchanged.
-3. Reversal (0.1-0.2 s): tracking of the current loop, no oscillation at 450 Hz, φ within ±φ_max.
-4. Voltage mismatch: soc of the two batteries different (for example 0.85 and 0.3: 1248 V and 1184 V
-   at no load, d = 0.95): switching currents at 25 %, 50 %, 100 % against the ZVS table of Sec. 5.
-   On the default bench the voltage drops of the batteries (R0 + R1 = 0.14 Ω, 30 V at 208 A) give
-   d ≈ 1 + 0.05 · load in forward power and d ≈ 1 − 0.05 · |load| in reverse power.
-5. Light load (0.1 pu): switching currents set by the magnetizing current.
+`init_model.m` selects the bench with `param.sim.bench_case`; after the run, `dab3_run_check.m` prints
+the measured operating point next to the harmonic model, the loss breakdown and the DC side.
+
+| Case | End of the run | Purpose | Status |
+|---|---|---|---|
+| `forward` | +1 pu | nominal point, Sec. 1-8 | run 01, below |
+| `reverse` | −1 pu | same quantities, power from side 2 to side 1 | to do |
+| `light` | +0.1 pu | switching currents set by the magnetizing current | to do |
+| `mismatch` | +0.25 pu, battery_2 at soc 0.3 (d ≈ 0.96) | ZVS limit of bridge 2 (Sec. 5) | to do |
+
+The reversal (0.1-0.2 s) is outside the logged window: watch it on the scopes, or log it with a longer
+`param.time.t_measure` and a decimation (the loss breakdown of `dab3_run_check.m` needs decimation 1).
+
+**Run 01** (`forward`, tc = 100 ns, 0.28-0.30 s): the battery drops give V1 = 1210 V, V2 = 1269 V
+(d = 1.05).
+
+| Quantity | Run 01 | Harmonic model at the same V1, V2, φ |
+|---|---|---|
+| φ | 28.35° (78-79 steps of tc) | |
+| Power side 1 / side 2 | 252.1 / 250.4 kW | 252.3 / 251.8 kW |
+| Phase current | 157.7 A rms, 250 A peak | 158.2 A rms, 237 A peak |
+| Switching current bridge 1 / bridge 2 | 99.1 / 143.1 A | 100.9 / 143.5 A |
+| Transition at the switching current | 80 / 58 ns (dead time 500 ns) | |
+| Magnetizing current | offset 2.1 / −8.3 / 6.2 A, peak 21 A | 12.2 A peak |
+| DC input current | 208.4 A, ±3 A at 500 Hz | 208.3 A reference |
+
+Between the two sides the run loses 1.0 kW more than the model: the numerical damping (0.91 kW) and
+the off-state conduction of the switch model (0.10 kW). The peak current and the magnetizing current
+carry the DC offset of the start (Sec. 9). Losses between the DC links 1.66 kW (plus 43 W stored in the
+DC link capacitors during the window): windings 0.20, cores 0.30, conduction 0.16, off-state
+conduction 0.10, numerical damping 0.91 kW; without the last two η = 99.74 % (no switching losses). With the turn-off
+estimate of Sec. 8 at this point (1.5 kW, upper bound) the total is about 2.2 kW, η ≈ 99.1 %, as
+`dab3_analysis.m` gives for d = 1.05 at full load.

@@ -1,8 +1,8 @@
 %[text] # three\_phase\_dab: model initialization (param structure by subsystem)
-% Rev. 01, 2026-10-29: three-phase DAB (DAB3), 1200 V -> 1200 V, 250 kW, fs = 10 kHz (numbers in
+% Rev. 02, 2026-10-29: three-phase DAB (DAB3), 1200 V -> 1200 V, 250 kW, fs = 10 kHz (numbers in
 % ./private/dab3_param.m, sizing in dab3_sizing.md). Everything the model needs is in the struct "param",
 % one group per subsystem:
-%   param.sim       simulation settings (stop time, Simscape local solver step, nonlinear iterations)
+%   param.sim       simulation settings (bench case, stop time, Simscape local solver step, nonlinear iterations)
 %   param.time      timing settings shared by all stages, and the PWM data of the stages not in this model
 %   param.dab3      DAB3: pwr_nom, fs, .pwm, .hw_in (the hardware numbers, kept here and not in the
 %                   library), .tank, .mod, .ctrl_in, .bench, .hw (hw_dab_three_phase_setup object), .ctrl
@@ -39,9 +39,12 @@ end
 clear overrides
 
 % save('sim_results_01.mat', '-v7.3', '-regexp', '_sim$', '^param$');
+% then dab3_run_check: powers, switching currents and losses of the logged window against the sizing
 %[text] ## Simulation
-param.sim.simlength = 0.3;                  % [s] model StopTime (bench of param.dab3.bench: reverse power, then
-                                            % reversal at 0.1 s, forward power at 1 pu from 0.2 s)
+param.sim.bench_case = 'forward';           % 'forward' (run 01), 'reverse', 'light', 'mismatch': current
+                                            % reference and batteries of ./private/dab3_param.m
+param.sim.simlength = 0.3;                  % [s] model StopTime ('forward': reverse power, then reversal at
+                                            % 0.1 s, forward power at 1 pu from 0.2 s)
 param.sim.tc = 100e-9;                      % [s] logging base, model MaxStep and Simscape local solver step
                                             % (glb_time.tc): 1000 steps per period at 10 kHz, phase resolution
                                             % 0.36 deg (1 % of the power at 30 deg). 500 ns for quick
@@ -77,7 +80,10 @@ param.time.dead_time_cllc = 2e-6;
 %[text] ### DAB3 PWM and bench
 % 1200 V -> 1200 V, 250 kW: the local numbers (pwr_nom, fs, pwm, hw_in, tank, mod, ctrl_in, bench) are in
 % ./private/dab3_param.m (fs = 10 kHz, fPWM_DAB = 6 fs = 60 kHz, single update)
-param.dab3 = dab3_param();
+param.dab3 = dab3_param(param.sim.bench_case);
+fprintf('DAB3 bench "%s": %.2f pu from %.2f s, %.2f pu from %.2f s (to the end), soc %.2f / %.2f\n', ...
+    param.dab3.bench.case, param.dab3.bench.i_ref1, param.dab3.bench.t_on, param.dab3.bench.i_ref2, ...
+    param.dab3.bench.t_rev, param.dab3.bench.soc_1, param.dab3.bench.soc_2);
 %[text] ### Global timing object
 t = param.time;
 d = param.dab3.pwm;
@@ -111,7 +117,7 @@ param.dab3.hw.Ld2 = t.Ld2;
 param.dab3.hw.Ls2 = t.Ld2;
 param.dab3.hw.Ls = t.L;
 clear t
-% the current loop normalizes the battery current of side 1 by idc1_bez (208 A)
+% the current loop normalizes the DC input current of side 1 (dab_current_input_modA) by idc1_bez (208 A)
 param.dab3.hw.Idc_FS = param.dab3.hw.idc1_nom;
 param.dab3.hw.displayInfo();
 
@@ -127,8 +133,8 @@ fprintf('Transformer: n1 = n2 = %d, B = %.3f T peak, Im = %.1f A peak (ideal), L
     hw.n1, lam/(hw.n1*param.dab3.hw_in.core_area), lam/hw.Lm, 1e3*hw.Lm, hw.Rfe/1e3);
 clear hw n12 op lam
 %[text] ### Control
-% PI gains of the current loop (feedback: battery current of side 1) and of the output voltage loop (not
-% active); see ./private/dab3_param.m and dab3_sizing.md
+% PI gains of the current loop (feedback: DC input current of side 1, behind the DC choke) and of the output
+% voltage loop (not active); see ./private/dab3_param.m and dab3_sizing.md
 c = param.dab3.ctrl_in;
 param.dab3.ctrl = ctrl_dab_setup(c.kp_udc, c.ki_udc, c.kp_idc, c.ki_idc);
 clear c
@@ -161,7 +167,8 @@ clear hw n12 op p o c_leg
 param.battery.nominal_battery_voltage_1 = param.dab3.hw.udc1_nom;  % [V] 1200 V
 param.battery.nominal_battery_voltage_2 = param.dab3.hw.udc2_nom;  % [V] 1200 V
 param.battery.nominal_battery_power = param.dab3.pwr_nom;          % [W]
-param.battery.initial_battery_soc = 0.85;                          % open circuit voltage about 1248 V
+param.battery.initial_battery_soc_1 = param.dab3.bench.soc_1;      % 0.85: open circuit voltage about 1248 V
+param.battery.initial_battery_soc_2 = param.dab3.bench.soc_2;
 % lithium_ion_battery_setup takes the charge capacity [Ah] as third argument. ASSUMPTION: 1C rating,
 % capacity = rated current x 1 h
 param.battery.charge_capacity_1 = param.battery.nominal_battery_power/param.battery.nominal_battery_voltage_1;
@@ -170,9 +177,9 @@ param.battery.charge_capacity_2 = param.battery.nominal_battery_power/param.batt
 % Kalman sample time of the battery blocks: in the model they read glb_time.ts_dab
 b = param.battery;
 param.battery.pack_1 = lithium_ion_battery_setup(b.nominal_battery_voltage_1, b.nominal_battery_power, ...
-    b.charge_capacity_1, b.initial_battery_soc, param.glb_time.ts_dab);
+    b.charge_capacity_1, b.initial_battery_soc_1, param.glb_time.ts_dab);
 param.battery.pack_2 = lithium_ion_battery_setup(b.nominal_battery_voltage_2, b.nominal_battery_power, ...
-    b.charge_capacity_2, b.initial_battery_soc, param.glb_time.ts_dab);
+    b.charge_capacity_2, b.initial_battery_soc_2, param.glb_time.ts_dab);
 clear b
 
 % special settings for simulation: stiffer battery, faster RC branch
@@ -195,8 +202,9 @@ for k = 1:2
 end
 param.dab3.ic.vc_dc1 = param.battery.ocv_1;                        % [V] about 1248 V at soc 0.85
 param.dab3.ic.vc_dc2 = param.battery.ocv_2;
-fprintf('Batteries: open circuit voltage %.0f V / %.0f V (soc %.2f), R0 = %.0f mOhm; DC links start at the same voltage\n', ...
-    param.battery.ocv_1, param.battery.ocv_2, param.battery.initial_battery_soc, 1e3*param.battery.pack_1.R0);
+fprintf('Batteries: open circuit voltage %.0f V / %.0f V (soc %.2f / %.2f), R0 = %.0f mOhm; DC links start at the same voltage\n', ...
+    param.battery.ocv_1, param.battery.ocv_2, param.battery.initial_battery_soc_1, ...
+    param.battery.initial_battery_soc_2, 1e3*param.battery.pack_1.R0);
 clear k f b z
 %[text] ## Sensors quantization
 param.meas.adc_quantization = 1/2^11;

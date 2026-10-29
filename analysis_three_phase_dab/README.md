@@ -22,7 +22,7 @@ the sizing note is the same.
 | Transformers | 3 single-phase, 3 × AM-NC-320C nanocrystalline cut cores each, 14 turns, 0.18-0.20 T, Lm = 1 mH (gapped), Rfe = 3 kΩ |
 | DC links, chokes | 500 µF / 1 mΩ and 250 µH / 2 mΩ per side (bench values), 40 A rms of six-pulse ripple at 60 kHz |
 | Devices | `danfoss_SKM1700MB20R4S2I4` on both bridges, 1.04 mΩ, Coss 3.28 nF |
-| Current loop | battery current of side 1, PI kp = 0.01, ki = 60 (18 Hz, PM 90°, GM 14 dB), feed-forward k_ff = 0.5 |
+| Current loop | DC input current of side 1 (behind the DC choke), PI kp = 0.01, ki = 60 (18 Hz, PM 90°, GM 14 dB), feed-forward k_ff = 0.5 |
 | Loss budget | about 2.4 kW, η ≈ 99.0 % (turn-off losses as an upper bound; 99.6 % without them) |
 
 ## Model `three_phase_dab.slx`
@@ -43,9 +43,10 @@ High), and the three `single_phase_transformer` blocks (Ld1, Ld2, Lm, Rfe, Rs1, 
 `dab_modA/dab_ctrl`: `three_phase_dab_modulator` (`fPWM_DAB`, φ = u · `param.dab3.mod.phi_max`),
 normalization of the feedbacks, and `ui_ctrl1`, triggered once per PWM period by `TRGO_DAB_1`: the
 current reference of the bench (`Step6`, `Step7` and the rate limiter, `param.dab3.bench`), the
-current PI (library `pi_ctrl`, gains `param.dab3.ctrl`) on the battery current of side 1
-(`current_battery_1`) plus the feed-forward `param.dab3.mod.k_ff` · i_ref. The output voltage loop
-(`Vout Ctrl`) is in the model but not selected (Variant Source).
+current PI (library `pi_ctrl`, gains `param.dab3.ctrl`) on the DC input current of side 1
+(`dab_current_input_modA`, the current of the DC choke where it enters the DC link) plus the
+feed-forward `param.dab3.mod.k_ff` · i_ref. The output voltage loop (`Vout Ctrl`) is in the model but
+not selected (Variant Source).
 
 ## How to run
 
@@ -57,10 +58,14 @@ current PI (library `pi_ctrl`, gains `param.dab3.ctrl`) on the battery current o
    and the transition times at the nominal point, the open circuit voltages of the batteries, and
    opens the model.
 2. Simulate: 0.3 s (`param.sim.simlength`), the last 20 ms logged at `tc` (`param.sim.tc` = 100 ns,
-   1000 steps per period; 500 ns for quick structural checks). Bench (`param.dab3.bench`): 0 until
-   10 ms, −1 pu (power from side 2 to side 1) with a ramp of 20 pu/s, reversal at 0.1 s, +1 pu
-   (side 1 to side 2) from 0.2 s to the end of the run.
-3. `scripts/plotting_sim_results.m`: transformer currents and voltages, last four periods
+   1000 steps per period; 500 ns for quick structural checks). Bench (`param.sim.bench_case`, numbers
+   in `param.dab3.bench`): `forward` (default) is 0 until 10 ms, −1 pu (power from side 2 to side 1)
+   with a ramp of 20 pu/s, reversal at 0.1 s, +1 pu (side 1 to side 2) from 0.2 s to the end of the
+   run; `reverse` ends at −1 pu, `light` at +0.1 pu, `mismatch` at +0.25 pu with battery_2 at soc 0.3.
+3. `dab3_run_check.m`: the logged window against the sizing (measured φ and switching currents next to
+   the harmonic model at the same voltages and φ, loss breakdown with the numerical damping of the
+   solver, magnetizing current offset, DC side). `scripts/plotting_sim_results.m`: transformer
+   currents and voltages, last four periods
    (`dab_ac_quantities.eps`). `spectrum.m`: spectrum of the phase current of side 1
    (`spectrum_i1_dab_transformer.eps`), harmonics h = 6k ± 1 of fs. `dab3_analysis.m`: steady state
    by harmonic superposition (nominal point, power and current against φ, map over load and
@@ -71,15 +76,23 @@ current PI (library `pi_ctrl`, gains `param.dab3.ctrl`) on the battery current o
 
 ## Numerical settings and limits of the model
 
-- tc = 100 ns: phase resolution 0.36°, 1 % of the power at 30°. The run time scales with 1/tc.
+- tc = 100 ns: phase resolution 0.36°, 1 % of the power at 30°. The run time scales with 1/tc. The
+  modulator rounds φ to steps of tc: the current loop toggles between two steps and excites the LC of
+  the DC side (run 01: ±3 A at 500 Hz on 208 A).
+- Backward Euler dissipates L/2 · (Δi)² per step in every inductance: 0.91 kW at tc = 100 ns in the
+  transformers at full load (run 01), more than their physical losses; it scales with tc.
+  `dab3_run_check.m` computes it and the efficiency without it.
 - The library modulator does not apply its `dead_time` parameter and the bridges have no Coss: the
   legs switch at once. The model gives the switching currents (sign and value at the edges), not
-  the ZVS transitions, and the switching losses of the bridge blocks are those of hard switching.
+  the ZVS transitions. The `ploss` outputs of the bridge blocks add Eon and Eoff at every edge (hard
+  switching), the electrical circuit has no switching loss; the switch model conducts about 13 mA in
+  the off state (0.1 kW for the 12 switches).
 - The transformer flux starts at zero: the magnetizing current has a DC offset of up to about 13 A
   that decays in about 0.9 s (Lm / (R1 ∥ R2')). Average the rising and falling edges of a leg to read
   the switching current.
-- The batteries start at soc 0.85 (about 1248 V) and drop or rise by about 30 V at 208 A: on the
-  default bench d = V2'/V1 ≈ 1 ± 0.05 · load.
+- The batteries start at soc 0.85 (about 1248 V) and drop or rise by 20-40 V at 208 A: run 01 ends
+  at 1210 V / 1269 V, d = V2'/V1 = 1.05 (d ≈ 1 + 0.05 · load in forward power, 1 − 0.05 · |load| in
+  reverse power).
 
 ## Library dependencies
 
@@ -99,15 +112,20 @@ the path); `init_model.m` prints the list at every run.
 |---|---|
 | `three_phase_dab.slx` | Simulink/Simscape model, reads only `param.*` |
 | `init_model.m` | builds `param`, writes the series inductance of the sizing over the library one, sets the initial voltages, opens the model |
-| `private/dab3_param.m` | the numbers of this DAB3: operating point, PWM, hardware, series inductance, modulator, PI gains, bench |
+| `private/dab3_param.m` | the numbers of this DAB3: operating point, PWM, hardware, series inductance, modulator, PI gains, bench cases |
 | `private/library_setup.m` | puts the library on the path (clones it when missing) |
 | `private/dab3_ideal_op.m`, `private/dab3_harmonic_op.m` | phase shift for a power (De Doncker), steady state by harmonic superposition |
-| `dab3_sizing.md` | sizing note: operating point, principle, series inductance, transformer, devices and ZVS, DC links, control, loss budget, numerics, checks to do |
+| `dab3_run_check.m`, `private/dab3_edges.m`, `private/dab3_isw.m` | check of a logged run against the sizing |
+| `dab3_sizing.md` | sizing note: operating point, principle, series inductance, transformer, devices and ZVS, DC links, control, loss budget, numerics, checks with the model and run 01 |
 | `dab3_analysis.m` | steady-state analysis of the sizing note (figures and tables) |
 | `scripts/plotting_sim_results.m`, `spectrum.m` | figures of a run (EPS in the current folder) |
 | `animation/` | `dab3_video.m` (versions `ii`…`iv`) builds `dab3.mp4`, a sliding-window animation of transformer voltages and current (phase U) and of the output voltage/current; `growing_harmonic_video.m` produces `growing_harmonic.mp4`. They read the runs saved with the previous init (`../sim_results/sim_results_1..3.mat`, with `glb_time` at the top level), which are not in git |
 
 ## Saved runs
 
-None yet with this init. The runs of the previous model (`sim_results_1..3.mat`: 3 × 250 kW data,
-fPWM_DAB = 12 kHz, so 2 kHz on the transformers) are not comparable with this sizing.
+| Run | Bench | Result |
+|---|---|---|
+| `sim_results_01.mat` | `forward`, tc = 100 ns, last 20 ms at +1 pu | V1 1210 V, V2 1269 V, φ 28.35°, 158 A rms, switching currents 99 / 143 A (harmonic model 101 / 144 A), 1.66 kW between the DC links of which 0.91 kW numerical damping; details in Sec. 10 of `dab3_sizing.md` |
+
+The runs of the previous model (`sim_results_1..3.mat`: 3 × 250 kW data, fPWM_DAB = 12 kHz, so 2 kHz
+on the transformers) are not comparable with this sizing.
