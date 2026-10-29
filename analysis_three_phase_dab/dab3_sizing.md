@@ -77,7 +77,8 @@ per transformer, Ac = 47 cm², about 26 kg.
 | Leakage | about 12 µH in total at 10 mm between the windings | the rest of the 28 µH as external or integrated inductor |
 
 The gap of the magnetizing inductance is a choice: 1 mH costs about 12 A of extra peak current and
-gives the ZVS at light load (Sec. 5); without the gap Lm is tens of mH and the light-load ZVS is lost.
+gives the ZVS at light load (Sec. 5); without the gap (µr about 5000 of the cut cores) Lm is about 8 mH: the ZVS
+limit at d = 1 moves from 9 % to about 15 % of the load, and a few amperes of DC current saturate the core.
 
 First comparison of the frequency (same core set, turns for B ≤ 0.35 T, same devices, turn-off losses
 as an upper bound, see Sec. 8): 2 kHz 0.74 kW, 5 kHz 1.4 kW, 10 kHz 2.7 kW, 20 kHz 5.2 kW of total
@@ -100,8 +101,8 @@ load (`dab3_analysis.m`, dead time 500 ns):
 |---|---|
 | 1.00 | 9 % of the load (magnetizing current: i_sw = 17 A at 10 %) |
 | 0.95 / 1.05 | 29 % / 31 % |
-| 0.90 / 1.10 | 46 % / 53 % |
-| 0.85 / 1.15 | 60 % / 73 % |
+| 0.90 / 1.10 | 45 % / 52 % |
+| 0.85 / 1.15 | 59 % / 72 % |
 
 The light-load range with voltage mismatch is the known limit of the DAB3 with six-step and phase shift
 only; if the batteries move by more than ±5 % the options are a DC link that follows the battery
