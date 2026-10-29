@@ -125,7 +125,11 @@ the path); `init_model.m` prints the list at every run.
 
 | Run | Bench | Result |
 |---|---|---|
-| `sim_results_01.mat` | `forward`, tc = 100 ns, last 20 ms at +1 pu | V1 1210 V, V2 1269 V, φ 28.35°, 158 A rms, switching currents 99 / 143 A (harmonic model 101 / 144 A), 1.66 kW between the DC links of which 0.91 kW numerical damping; details in Sec. 10 of `dab3_sizing.md` |
+| `sim_results_01.mat` | `forward`, tc = 100 ns, last 20 ms at +1 pu | V1 1210 V, V2 1269 V, φ 28.35°, 158 A rms, switching currents 99 / 143 A (harmonic model 101 / 144 A), 1.66 kW between the DC links of which 0.91 kW numerical damping |
+| `sim_results_02.mat` | `reverse`, last 20 ms at −1 pu | V1 1271 V, V2 1208 V, φ −30.19°, 168 A rms, switching currents 152 / 106 A (model 152 / 107 A), 266.5 kW from side 2 at 1 pu of current |
+| `sim_results_03.mat` | `light`, last 20 ms at +0.1 pu | V1 1237 V, V2 1243 V, φ 2.52°, switching currents 13.4 / 19.6 A (model 14.6 / 19.4 A): partial ZVS of bridge 1, cores 334 W |
+
+Details in Sec. 10 of `dab3_sizing.md`.
 
 The runs of the previous model (`sim_results_1..3.mat`: 3 × 250 kW data, fPWM_DAB = 12 kHz, so 2 kHz
 on the transformers) are not comparable with this sizing.

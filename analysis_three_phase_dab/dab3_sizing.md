@@ -200,31 +200,48 @@ the measured operating point next to the harmonic model, the loss breakdown and 
 
 | Case | End of the run | Purpose | Status |
 |---|---|---|---|
-| `forward` | +1 pu | nominal point, Sec. 1-8 | run 01, below |
-| `reverse` | −1 pu | same quantities, power from side 2 to side 1 | to do |
-| `light` | +0.1 pu | switching currents set by the magnetizing current | to do |
+| `forward` | +1 pu | nominal point, Sec. 1-8 | run 01 |
+| `reverse` | −1 pu | same quantities, power from side 2 to side 1 | run 02 |
+| `light` | +0.1 pu | switching currents set by the magnetizing current | run 03 |
 | `mismatch` | +0.25 pu, battery_2 at soc 0.3 (d ≈ 0.96) | ZVS limit of bridge 2 (Sec. 5) | to do |
 
 The reversal (0.1-0.2 s) is outside the logged window: watch it on the scopes, or log it with a longer
 `param.time.t_measure` and a decimation (the loss breakdown of `dab3_run_check.m` needs decimation 1).
 
-**Run 01** (`forward`, tc = 100 ns, 0.28-0.30 s): the battery drops give V1 = 1210 V, V2 = 1269 V
-(d = 1.05).
+Results (tc = 100 ns, logged window 0.28-0.30 s; in brackets the harmonic model at the measured
+V1, V2 and φ):
 
-| Quantity | Run 01 | Harmonic model at the same V1, V2, φ |
-|---|---|---|
-| φ | 28.35° (78-79 steps of tc) | |
-| Power side 1 / side 2 | 252.1 / 250.4 kW | 252.3 / 251.8 kW |
-| Phase current | 157.7 A rms, 250 A peak | 158.2 A rms, 237 A peak |
-| Switching current bridge 1 / bridge 2 | 99.1 / 143.1 A | 100.9 / 143.5 A |
-| Transition at the switching current | 80 / 58 ns (dead time 500 ns) | |
-| Magnetizing current | offset 2.1 / −8.3 / 6.2 A, peak 21 A | 12.2 A peak |
-| DC input current | 208.4 A, ±3 A at 500 Hz | 208.3 A reference |
+| Quantity | 01 `forward` | 02 `reverse` | 03 `light` |
+|---|---|---|---|
+| V1 / V2 | 1210 / 1269 V (d = 1.05) | 1271 / 1208 V (d = 0.95) | 1237 / 1243 V (d = 1.005) |
+| Power side 1, side 2 | 252.1 kW in, 250.4 kW out | 264.7 kW out, 266.5 kW in | 25.7 kW in, 25.1 kW out |
+| DC input current, side 1 | 208.4 A (reference 208.3 A) | −208.3 A | 20.8 A |
+| φ | 28.35° | −30.19° | 2.52° (7 steps of tc) |
+| Phase current | 157.7 (158.2) A rms | 168.5 (168.6) A rms | 16.4 (14.9) A rms |
+| Switching current, bridge 1 | 99.1 (100.9) A | 151.8 (151.9) A | 13.4 (14.6) A |
+| Switching current, bridge 2 | 143.1 (143.5) A | 105.7 (107.3) A | 19.6 (19.4) A |
+| Transition, bridge 1 / 2 (dead time 500 ns) | 80 / 58 ns | 55 / 75 ns | 607 / 415 ns |
+| Losses between the DC links | 1.66 kW | 1.76 kW | 0.57 kW |
+| of which numerical damping, off-state conduction | 0.91, 0.10 kW | 0.97, 0.10 kW | 0.13, 0.10 kW |
+| windings, cores, conduction | 0.20, 0.30, 0.16 kW | 0.22, 0.29, 0.18 kW | 0.00, 0.33, 0.00 kW |
+| η without numerical damping and off-state conduction | 99.74 % | 99.74 % | 98.69 % |
+| Limit cycle of the DC input current (500 Hz) | ±3 A | ±0.6 A | ±4 A |
+| Magnetizing current offset (start) | 2.1 / −8.3 / 6.2 A | 1.6 / −8.5 / 6.8 A | 1.7 / −8.2 / 6.5 A |
 
-Between the two sides the run loses 1.0 kW more than the model: the numerical damping (0.91 kW) and
-the off-state conduction of the switch model (0.10 kW). The peak current and the magnetizing current
-carry the DC offset of the start (Sec. 9). Losses between the DC links 1.66 kW (plus 43 W stored in the
-DC link capacitors during the window): windings 0.20, cores 0.30, conduction 0.16, off-state
-conduction 0.10, numerical damping 0.91 kW; without the last two η = 99.74 % (no switching losses). With the turn-off
-estimate of Sec. 8 at this point (1.5 kW, upper bound) the total is about 2.2 kW, η ≈ 99.1 %, as
-`dab3_analysis.m` gives for d = 1.05 at full load.
+The run loses about 1 kW more than the harmonic model at full load: the numerical damping and the
+off-state conduction of the switch model. The peak currents and the magnetizing current carry the DC
+offset of the start (Sec. 9). With the turn-off estimate of Sec. 8 at the point of run 01 (1.5 kW,
+upper bound) the total is about 2.2 kW, η ≈ 99.1 %, as `dab3_analysis.m` gives for d = 1.05 at full
+load.
+
+- Run 02, reverse power: the loop regulates the current of side 1, so −1 pu with battery_1 charging
+  at 1271 V is 265 kW on side 1 and 266.5 kW (220.6 A) from side 2, 6 % above 250 kW. A power
+  reference, or the current reference scaled by 1200 V / V1, would keep 250 kW in both directions.
+- Run 03, light load: bridge 1 (the lower voltage, d = 1.005) has 13.4 A at the commutations and
+  needs 16.2 A to complete the transition in 500 ns: the leg voltage reaches 80-90 % of its swing
+  before the turn-on (partial ZVS, about 10 W of residual turn-on loss, Sec. 5 puts the limit at 9 %
+  of the load with d = 1). The cores dominate the losses (334 W, 1.3 % of 25 kW; Rfe is still a
+  placeholder). One step of φ is 14 % of the power at 2.5°, so the limit cycle is ±20 % of the
+  current; the flux offset of the start (8 A) brings some edges of bridge 1 to a negative switching
+  current (minimum −1.6 A). In the converter a soft start with the first pulses at half width avoids
+  the offset.
