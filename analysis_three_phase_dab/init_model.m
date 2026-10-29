@@ -18,25 +18,23 @@
 % ctrl_dab_setup, device_mosfet_setup, device_ideal_switch_setting, lithium_ion_battery_setup,
 % liquid_cooled_plate_2kw_setup) and the blocks of three_phase_dab.slx (three_phase_dab_modulator,
 % three_phase_inverter_mosfet_based_with_thermal_model, single_phase_transformer, lithium_ion_battery, pi_ctrl,
-% discrete_time_low_pass_filter); the model's numbers stay in this folder. A function that must be frozen or
-% changed for this model only goes in ./private with the same name: MATLAB resolves private functions before
-% the path, for the files of this folder only, and the list of the files of ./private is printed at every
-% run. The first command of the script, library_setup (./private/library_setup.m), adds the library to the
-% path with its subfolders: it uses the copy already on the path, else the folder "library" next to this
-% repository (or the one named by the environment variable PWR_CONTROL_LIBRARY), and clones
-% https://github.com/pwr-control/library when neither exists.
+% discrete_time_low_pass_filter); the model's numbers stay in this folder. The functions of ./private (the
+% numbers, the helpers, and any function of the library that must be frozen or changed for this model only,
+% with the same name) are called through the handles made by dab3_private.m: prv.<name>(...). The Live Editor
+% runs a live script from a temporary copy outside this folder, where ./private is out of scope ("Unrecognized
+% function or variable 'library_setup'"); the handles keep the scope of the function that made them, so the
+% script runs the same with Run and from the Command Window, and a section runs on its own once prv is in the
+% workspace. The list of the files of ./private is printed at every run. The first call, prv.library_setup()
+% (./private/library_setup.m), adds the library to the path with its subfolders: it uses the copy already on
+% the path, else the folder "library" next to this repository (or the one named by the environment variable
+% PWR_CONTROL_LIBRARY), and clones https://github.com/pwr-control/library when neither exists.
 
 clear;
-library_setup;              % pwr-control/library on the path, cloned next to this repository when missing (./private/library_setup.m) %[output:8ae21884]
+prv = dab3_private();       % handles to the functions of ./private (dab3_private.m): the Live Editor does not see ./private
+prv.library_setup();        % pwr-control/library on the path, cloned next to this repository when missing
 [model, options] = init_environment('three_phase_dab');
 param = struct();
-
-% functions overridden for this model and local helpers: ./private takes precedence over the library
-overrides = dir(fullfile(fileparts(mfilename('fullpath')), 'private', '*.m'));
-if ~isempty(overrides)
-    fprintf('%s init: local functions in private/ (precedence over the library): %s\n', model, strjoin({overrides.name}, ', '));
-end
-clear overrides
+fprintf('%s init: functions of ./private, called as prv.<name>: %s\n', model, strjoin(fieldnames(prv)', ', '));
 
 % save('sim_results_01.mat', '-v7.3', '-regexp', '_sim$', '^param$');
 % then dab3_run_check: powers, switching currents and losses of the logged window against the sizing
@@ -80,7 +78,7 @@ param.time.dead_time_cllc = 2e-6;
 %[text] ### DAB3 PWM and bench
 % 1200 V -> 1200 V, 250 kW: the local numbers (pwr_nom, fs, pwm, hw_in, tank, mod, ctrl_in, bench) are in
 % ./private/dab3_param.m (fs = 10 kHz, fPWM_DAB = 6 fs = 60 kHz, single update)
-param.dab3 = dab3_param(param.sim.bench_case);
+param.dab3 = prv.dab3_param(param.sim.bench_case);
 fprintf('DAB3 bench "%s": %.2f pu from %.2f s, %.2f pu from %.2f s (to the end), soc %.2f / %.2f\n', ...
     param.dab3.bench.case, param.dab3.bench.i_ref1, param.dab3.bench.t_on, param.dab3.bench.i_ref2, ...
     param.dab3.bench.t_rev, param.dab3.bench.soc_1, param.dab3.bench.soc_2);
@@ -123,7 +121,7 @@ param.dab3.hw.displayInfo();
 
 hw = param.dab3.hw;
 n12 = hw.n1/hw.n2;
-op = dab3_ideal_op(hw.udc1_nom, hw.udc2_nom*n12, param.dab3.fs, hw.Ld1 + hw.Ld2*n12^2, param.dab3.pwr_nom);
+op = prv.dab3_ideal_op(hw.udc1_nom, hw.udc2_nom*n12, param.dab3.fs, hw.Ld1 + hw.Ld2*n12^2, param.dab3.pwr_nom);
 lam = hw.udc1_nom/(9*param.dab3.fs);                % [Vs] peak flux linkage of the six-step phase voltage
 fprintf('DAB3 series inductance: Ld1 = %.1f uH, Ld2 = %.1f uH, L = %.1f uH per phase (primary)\n', ...
     1e6*hw.Ld1, 1e6*hw.Ld2, 1e6*(hw.Ld1 + hw.Ld2*n12^2));
@@ -151,11 +149,11 @@ param.dab3.ideal_switch = device_ideal_switch_setting(param.dev.used_device_idea
 % have no Coss: the model shows the switching currents, not the transitions.
 hw = param.dab3.hw;
 n12 = hw.n1/hw.n2;
-op = dab3_ideal_op(hw.udc1_nom, hw.udc2_nom*n12, param.dab3.fs, hw.Ld1 + hw.Ld2*n12^2, param.dab3.pwr_nom);
+op = prv.dab3_ideal_op(hw.udc1_nom, hw.udc2_nom*n12, param.dab3.fs, hw.Ld1 + hw.Ld2*n12^2, param.dab3.pwr_nom);
 p = struct('V1', hw.udc1_nom, 'V2', hw.udc2_nom, 'n1', hw.n1, 'n2', hw.n2, 'fs', param.dab3.fs, ...
     'L1', hw.Ld1, 'R1', hw.Rs1 + param.dab3.mosfet.Rds_on, 'L2r', hw.Ld2*n12^2, ...
     'R2r', (hw.Rs2 + param.dab3.mosfet.Rds_on)*n12^2, 'Lm', hw.Lm, 'Rfe', hw.Rfe);
-o = dab3_harmonic_op(p, op.phi, 1800, 1001);
+o = prv.dab3_harmonic_op(p, op.phi, 1800, 1001);
 c_leg = 2*param.dab3.mosfet.Coss;
 fprintf('Nominal point: I1 = %.0f A rms, %.0f A peak; i_sw1 = %.0f A, i_sw2 = %.0f A; transitions %.0f / %.0f ns, dead time %.0f ns\n', ...
     o.I1rms, o.I1pk, o.i_sw1, o.i_sw2, 1e9*c_leg*hw.udc1_nom/o.i_sw1, 1e9*c_leg*hw.udc2_nom/o.i_sw2, ...
@@ -241,7 +239,4 @@ clear open_scopes k
 %---
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":8.4}
-%---
-%[output:8ae21884]
-%   data: {"dataType":"error","outputData":{"errorType":"runtime","text":"Unrecognized function or variable 'library_setup'."}}
 %---

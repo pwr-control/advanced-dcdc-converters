@@ -50,9 +50,11 @@ not selected (Variant Source).
 
 ## How to run
 
-1. `init_model.m`: first puts the companion library on the path (`private/library_setup.m`: the copy
-   already on the path, else the folder `library` next to this repository or the one named by the
-   environment variable `PWR_CONTROL_LIBRARY`, cloned from GitHub when it does not exist), then
+1. `init_model.m` (Run in the Live Editor, or `init_model` in the Command Window): first makes the
+   handles to the functions of `private/` (`dab3_private.m`, see below) and puts the companion library
+   on the path (`private/library_setup.m`: the copy already on the path, else the folder `library` next
+   to this repository or the one named by the environment variable `PWR_CONTROL_LIBRARY`, cloned from
+   GitHub when it does not exist), then
    builds `param` (one group per subsystem, numbers in `private/dab3_param.m`), prints the timing,
    the series inductance, φ at nominal power, the transformer flux density, the switching currents
    and the transition times at the nominal point, the open circuit voltages of the batteries, and
@@ -103,8 +105,15 @@ Blocks: `three_phase_dab_modulator`, `three_phase_inverter_mosfet_based_with_the
 `init_model.m` with the one of the sizing), `ctrl_dab_setup`, `device_mosfet_setup`,
 `device_ideal_switch_setting`, `lithium_ion_battery_setup`, `liquid_cooled_plate_2kw_setup`, device
 datasets `danfoss_SKM1700MB20R4S2I4` and `silicon_high_power_ideal_switch`. A library function that
-must change for this model only goes in `private/` with the same name (private functions come before
-the path); `init_model.m` prints the list at every run.
+must change for this model only goes in `private/` with the same name and is called as
+`prv.<name>(...)`; `init_model.m` prints the list at every run.
+
+The scripts (`init_model.m`, `dab3_analysis.m`, `dab3_run_check.m`) call the functions of `private/`
+through the handles made by `dab3_private.m`: `prv = dab3_private(); prv.dab3_param(...)`. The Live
+Editor runs a live script from a temporary copy outside this folder, where `private/` is out of scope
+("Unrecognized function or variable 'library_setup'"); a function of this folder sees `private/`, and
+its handles keep that scope wherever they are called. A section run on its own needs `prv` in the
+workspace (the first section makes it).
 
 ## Files
 
@@ -112,6 +121,7 @@ the path); `init_model.m` prints the list at every run.
 |---|---|
 | `three_phase_dab.slx` | Simulink/Simscape model, reads only `param.*` |
 | `init_model.m` | builds `param`, writes the series inductance of the sizing over the library one, sets the initial voltages, opens the model |
+| `dab3_private.m` | handles to the functions of `private/` (`prv.<name>`), so that the live scripts work in the Live Editor |
 | `private/dab3_param.m` | the numbers of this DAB3: operating point, PWM, hardware, series inductance, modulator, PI gains, bench cases |
 | `private/library_setup.m` | puts the library on the path (clones it when missing) |
 | `private/dab3_ideal_op.m`, `private/dab3_harmonic_op.m` | phase shift for a power (De Doncker), steady state by harmonic superposition |

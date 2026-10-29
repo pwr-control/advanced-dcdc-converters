@@ -16,8 +16,9 @@
 % Signals: i1 out of bridge 1 into the transformer, i2 out of the transformer into bridge 2, u1 and u2
 % phase-to-star voltages of the bridges; inverter_k_dab_devices_modA: per switch [ploss, v, i, T_JH, T_HA].
 % It needs the logging step equal to the solver step (param.time.tc_decimation = 1). Helpers:
-% ./private/dab3_edges.m, ./private/dab3_isw.m.
+% ./private/dab3_edges.m, ./private/dab3_isw.m, called through the handles of dab3_private.m.
 
+prv = dab3_private();                                       % ./private through handles (dab3_private.m)
 hw = param.dab3.hw;
 dev = param.dab3.mosfet;
 fs = param.dab3.fs;
@@ -60,8 +61,8 @@ fprintf('  losses between the DC links %.0f W (%.0f W into the DC link capacitor
 
 %[text] ## Operating point on the edges
 % leg k of a bridge switches when phase k jumps by 2V/3 (the other two phases by -V/3)
-ed1 = dab3_edges(u1, mean(V1));
-ed2 = dab3_edges(u2, mean(V2));
+ed1 = prv.dab3_edges(u1, mean(V1));
+ed2 = prv.dab3_edges(u2, mean(V2));
 % phase shift: from each edge of bridge 1 to the next edge of bridge 2 of the same leg and direction. The
 % edges sit on the grid of tc and 1/fPWM_DAB is not a whole number of steps: the delay of the single edges
 % differs by one step from leg to leg, the mean over all the edges is the phase shift.
@@ -80,8 +81,8 @@ fprintf('Phase shift %.2f deg (single edges %.2f to %.2f deg, steps of tc = %.2f
     rad2deg(min(phk)), rad2deg(max(phk)), 360*fs*tc);
 % switching current: current into the leg node at a rising edge, out of it at a falling edge (> 0: ZVS
 % possible). Bridge 1: i1 leaves the leg node; bridge 2: i2 enters it. Mean of the samples around the edge.
-sw1 = dab3_isw(ed1, -i1);
-sw2 = dab3_isw(ed2, i2);
+sw1 = prv.dab3_isw(ed1, -i1);
+sw2 = prv.dab3_isw(ed2, i2);
 fprintf('Switching currents [A], rising / falling / mean per leg, then all edges (minimum):\n');
 for b = 1:2
     if b == 1
@@ -101,7 +102,7 @@ end
 p = struct('V1', mean(V1), 'V2', mean(V2), 'n1', hw.n1, 'n2', hw.n2, 'fs', fs, ...
     'L1', hw.Ld1, 'R1', hw.Rs1 + dev.Rds_on, 'L2r', hw.Ld2*n12^2, ...
     'R2r', (hw.Rs2 + dev.Rds_on)*n12^2, 'Lm', hw.Lm, 'Rfe', hw.Rfe);
-o = dab3_harmonic_op(p, phi);
+o = prv.dab3_harmonic_op(p, phi);
 I1rms = sqrt(mean(i1.^2));
 I2rms = sqrt(mean(i2.^2));
 fprintf('                         run          harmonic model\n');

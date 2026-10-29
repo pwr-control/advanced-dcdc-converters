@@ -11,6 +11,7 @@
 % a snubber), turn-on only where the switching current has the wrong sign (hard switching).
 
 close all
+prv = dab3_private();                                       % ./private through handles (dab3_private.m)
 hw = param.dab3.hw;
 dev = param.dab3.mosfet;
 fs = param.dab3.fs;
@@ -31,8 +32,8 @@ loss = @(o, V1, V2) [3*dev.Rds_on*(o.I1rms^2 + o.I2rms^2), ...
     2*V1^2/(3*hw.Rfe)];
 
 %[text] ## Nominal point
-op = dab3_ideal_op(p.V1, p.V2*n12, fs, L, param.dab3.pwr_nom);
-o = dab3_harmonic_op(p, op.phi);
+op = prv.dab3_ideal_op(p.V1, p.V2*n12, fs, L, param.dab3.pwr_nom);
+o = prv.dab3_harmonic_op(p, op.phi);
 ls = loss(o, p.V1, p.V2);
 fprintf('Nominal point, %.0f V / %.0f V, L = %.1f uH: phi = %.2f deg (ideal), P1 = %.1f kW, P2 = %.1f kW\n', ...
     p.V1, p.V2, 1e6*L, rad2deg(op.phi), o.P1/1e3, o.P2/1e3);
@@ -67,7 +68,7 @@ P_id = k*sign(phi).*((a <= pi/3).*a.*(2/3 - a/(2*pi)) + (a > pi/3).*(a - a.^2/pi
 P_h = zeros(size(phi));
 I_h = zeros(size(phi));
 for j = 1:numel(phi)
-    oj = dab3_harmonic_op(p, phi(j), 600, 301);
+    oj = prv.dab3_harmonic_op(p, phi(j), 600, 301);
     P_h(j) = oj.P2;
     I_h(j) = oj.I1rms;
 end
@@ -90,8 +91,8 @@ for d = d_list
     for x = load_list
         pd = p;
         pd.V2 = d*p.V1/n12;
-        opd = dab3_ideal_op(pd.V1, pd.V2*n12, fs, L, x*param.dab3.pwr_nom);
-        od = dab3_harmonic_op(pd, opd.phi, 1800, 1001);
+        opd = prv.dab3_ideal_op(pd.V1, pd.V2*n12, fs, L, x*param.dab3.pwr_nom);
+        od = prv.dab3_harmonic_op(pd, opd.phi, 1800, 1001);
         ld = loss(od, pd.V1, pd.V2);
         z1 = od.i_sw1 >= c_leg*pd.V1/td;
         z2 = od.i_sw2 >= c_leg*pd.V2/td;
@@ -108,8 +109,8 @@ for jd = 1:numel(d_grid)
     for jx = 1:numel(x_grid)
         pd = p;
         pd.V2 = d_grid(jd)*p.V1/n12;
-        opd = dab3_ideal_op(pd.V1, pd.V2*n12, fs, L, x_grid(jx)*param.dab3.pwr_nom);
-        od = dab3_harmonic_op(pd, opd.phi, 600, 301);
+        opd = prv.dab3_ideal_op(pd.V1, pd.V2*n12, fs, L, x_grid(jx)*param.dab3.pwr_nom);
+        od = prv.dab3_harmonic_op(pd, opd.phi, 600, 301);
         isw1(jx, jd) = od.i_sw1 - c_leg*pd.V1/td;            % > 0: ZVS of bridge 1 within the dead time
         isw2(jx, jd) = od.i_sw2 - c_leg*pd.V2/td;
     end
