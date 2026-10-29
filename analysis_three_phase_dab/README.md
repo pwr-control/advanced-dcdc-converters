@@ -125,9 +125,10 @@ the path); `init_model.m` prints the list at every run.
 
 | Run | Bench | Result |
 |---|---|---|
-| `sim_results_01.mat` | `forward`, tc = 100 ns, last 20 ms at +1 pu | V1 1210 V, V2 1269 V, φ 28.35°, 158 A rms, switching currents 99 / 143 A (harmonic model 101 / 144 A), 1.66 kW between the DC links of which 0.91 kW numerical damping |
-| `sim_results_02.mat` | `reverse`, last 20 ms at −1 pu | V1 1271 V, V2 1208 V, φ −30.19°, 168 A rms, switching currents 152 / 106 A (model 152 / 107 A), 266.5 kW from side 2 at 1 pu of current |
-| `sim_results_03.mat` | `light`, last 20 ms at +0.1 pu | V1 1237 V, V2 1243 V, φ 2.52°, switching currents 13.4 / 19.6 A (model 14.6 / 19.4 A): partial ZVS of bridge 1, cores 334 W |
+| `sim_results_01.mat` | `forward`, tc = 100 ns, last 20 ms at +1 pu | V1 1210 V, V2 1269 V, φ 28.25°, 158 A rms, switching currents 99 / 143 A (harmonic model 101 / 143 A), 1.66 kW between the DC links of which 0.91 kW numerical damping |
+| `sim_results_02.mat` | `reverse`, last 20 ms at −1 pu | V1 1271 V, V2 1208 V, φ −30.14°, 168 A rms, switching currents 152 / 106 A (model 152 / 107 A), 266.5 kW from side 2 at 1 pu of current |
+| `sim_results_03.mat` | `light`, last 20 ms at +0.1 pu | V1 1237 V, V2 1243 V, φ 2.56°, switching currents 13.4 / 19.6 A (model 14.8 / 19.6 A): partial ZVS of bridge 1, cores 334 W |
+| `sim_results_04.mat` | `mismatch`, last 20 ms at +0.25 pu | V1 1233 V, V2 1186 V (d 0.96), φ 6.83°, switching currents 50.2 / 16.0 A (model 51.6 / 15.9 A): bridge 2 on the ZVS boundary (15.6 A needed) |
 
 Details in Sec. 10 of `dab3_sizing.md`.
 

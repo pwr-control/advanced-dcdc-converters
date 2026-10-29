@@ -62,24 +62,22 @@ fprintf('  losses between the DC links %.0f W (%.0f W into the DC link capacitor
 % leg k of a bridge switches when phase k jumps by 2V/3 (the other two phases by -V/3)
 ed1 = dab3_edges(u1, mean(V1));
 ed2 = dab3_edges(u2, mean(V2));
-% phase shift: from the rising edge of leg a of bridge 1 to the next rising edge of leg a of bridge 2
-r1 = ed1.n(ed1.leg == 1 & ed1.dir > 0);
-r2 = ed2.n(ed2.leg == 1 & ed2.dir > 0);
-dn = zeros(size(r2));
-for k = 1:numel(r2)
-    j = find(r1 <= r2(k), 1, 'last');
-    if isempty(j)
-        dn(k) = NaN;
-    else
-        dn(k) = r2(k) - r1(j);
+% phase shift: from each edge of bridge 1 to the next edge of bridge 2 of the same leg and direction. The
+% edges sit on the grid of tc and 1/fPWM_DAB is not a whole number of steps: the delay of the single edges
+% differs by one step from leg to leg, the mean over all the edges is the phase shift.
+dn = NaN(size(ed2.n));
+for k = 1:numel(ed2.n)
+    j = find(ed1.leg == ed2.leg(k) & ed1.dir == ed2.dir(k) & ed1.n <= ed2.n(k), 1, 'last');
+    if ~isempty(j)
+        dn(k) = ed2.n(k) - ed1.n(j);
     end
 end
 dn = dn(~isnan(dn));
-phi = 2*pi*fs*tc*mean(dn);
-if phi > pi
-    phi = phi - 2*pi;
-end
-fprintf('Phase shift %.2f deg (%d to %d steps of tc = %.2f deg)\n', rad2deg(phi), min(dn), max(dn), 360*fs*tc);
+phk = 2*pi*fs*tc*dn;
+phk(phk > pi) = phk(phk > pi) - 2*pi;                       % bridge 2 leading: reverse power
+phi = mean(phk);
+fprintf('Phase shift %.2f deg (single edges %.2f to %.2f deg, steps of tc = %.2f deg)\n', rad2deg(phi), ...
+    rad2deg(min(phk)), rad2deg(max(phk)), 360*fs*tc);
 % switching current: current into the leg node at a rising edge, out of it at a falling edge (> 0: ZVS
 % possible). Bridge 1: i1 leaves the leg node; bridge 2: i2 enters it. Mean of the samples around the edge.
 sw1 = dab3_isw(ed1, -i1);
@@ -175,6 +173,6 @@ for k = 1:4
     fprintf('  %s: mean %.2f, over one period %.2f to %.2f; largest component below 5 kHz %.2f at %.0f Hz; %.3f at %.0f kHz\n', ...
         names{k}, mean(x), min(xm(Np:end-Np)), max(xm(Np:end-Np)), a_lf, f(lf(j_lf)), max(X(hf)), 6*fs/1e3);
 end
-clear hw dev fs tc td c_leg n12 t V1 I1 V2 I2 u1 i1 u2 i2 Tw Np Pin1 Pin2 dEc eta ed1 ed2 r1 r2 dn k j phi sw1 sw2
+clear hw dev fs tc td c_leg n12 t V1 I1 V2 I2 u1 i1 u2 i2 Tw Np Pin1 Pin2 dEc eta ed1 ed2 dn phk k j phi sw1 sw2
 clear b sw V p o I1rms I2rms p_cu p_fe p_num_ld p_num_lm im_dc im_pk di1 di2 e im p_on p_off p_blk D v is on
 clear p_sum f names sigs x X lf a_lf j_lf hf xm

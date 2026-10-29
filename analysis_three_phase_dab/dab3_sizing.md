@@ -203,7 +203,7 @@ the measured operating point next to the harmonic model, the loss breakdown and 
 | `forward` | +1 pu | nominal point, Sec. 1-8 | run 01 |
 | `reverse` | −1 pu | same quantities, power from side 2 to side 1 | run 02 |
 | `light` | +0.1 pu | switching currents set by the magnetizing current | run 03 |
-| `mismatch` | +0.25 pu, battery_2 at soc 0.3 (d ≈ 0.96) | ZVS limit of bridge 2 (Sec. 5) | to do |
+| `mismatch` | +0.25 pu, battery_2 at soc 0.3 (d ≈ 0.96) | ZVS limit of bridge 2 (Sec. 5) | run 04 |
 
 The reversal (0.1-0.2 s) is outside the logged window: watch it on the scopes, or log it with a longer
 `param.time.t_measure` and a decimation (the loss breakdown of `dab3_run_check.m` needs decimation 1).
@@ -211,22 +211,22 @@ The reversal (0.1-0.2 s) is outside the logged window: watch it on the scopes, o
 Results (tc = 100 ns, logged window 0.28-0.30 s; in brackets the harmonic model at the measured
 V1, V2 and φ):
 
-| Quantity | 01 `forward` | 02 `reverse` | 03 `light` |
-|---|---|---|---|
-| V1 / V2 | 1210 / 1269 V (d = 1.05) | 1271 / 1208 V (d = 0.95) | 1237 / 1243 V (d = 1.005) |
-| Power side 1, side 2 | 252.1 kW in, 250.4 kW out | 264.7 kW out, 266.5 kW in | 25.7 kW in, 25.1 kW out |
-| DC input current, side 1 | 208.4 A (reference 208.3 A) | −208.3 A | 20.8 A |
-| φ | 28.35° | −30.19° | 2.52° (7 steps of tc) |
-| Phase current | 157.7 (158.2) A rms | 168.5 (168.6) A rms | 16.4 (14.9) A rms |
-| Switching current, bridge 1 | 99.1 (100.9) A | 151.8 (151.9) A | 13.4 (14.6) A |
-| Switching current, bridge 2 | 143.1 (143.5) A | 105.7 (107.3) A | 19.6 (19.4) A |
-| Transition, bridge 1 / 2 (dead time 500 ns) | 80 / 58 ns | 55 / 75 ns | 607 / 415 ns |
-| Losses between the DC links | 1.66 kW | 1.76 kW | 0.57 kW |
-| of which numerical damping, off-state conduction | 0.91, 0.10 kW | 0.97, 0.10 kW | 0.13, 0.10 kW |
-| windings, cores, conduction | 0.20, 0.30, 0.16 kW | 0.22, 0.29, 0.18 kW | 0.00, 0.33, 0.00 kW |
-| η without numerical damping and off-state conduction | 99.74 % | 99.74 % | 98.69 % |
-| Limit cycle of the DC input current (500 Hz) | ±3 A | ±0.6 A | ±4 A |
-| Magnetizing current offset (start) | 2.1 / −8.3 / 6.2 A | 1.6 / −8.5 / 6.8 A | 1.7 / −8.2 / 6.5 A |
+| Quantity | 01 `forward` | 02 `reverse` | 03 `light` | 04 `mismatch` |
+|---|---|---|---|---|
+| V1 / V2 | 1210 / 1269 V (d = 1.05) | 1271 / 1208 V (d = 0.95) | 1237 / 1243 V (d = 1.005) | 1233 / 1186 V (d = 0.96) |
+| Power side 1, side 2 | 252.1 kW in, 250.4 kW out | 264.7 kW out, 266.5 kW in | 25.7 kW in, 25.1 kW out | 64.3 kW in, 63.6 kW out |
+| DC input current, side 1 | 208.4 A (reference 208.3 A) | −208.3 A | 20.8 A | 52.2 A |
+| φ (mean over all the edges) | 28.25° | −30.14° | 2.56° | 6.83° |
+| Phase current | 157.7 (157.6) A rms | 168.5 (168.4) A rms | 16.4 (15.1) A rms | 42.1 (41.6) A rms |
+| Switching current, bridge 1 | 99.1 (100.5) A | 151.8 (151.8) A | 13.4 (14.8) A | 50.2 (51.6) A |
+| Switching current, bridge 2 | 143.1 (143.0) A | 105.7 (107.1) A | 19.6 (19.6) A | 16.0 (15.9) A |
+| Transition, bridge 1 / 2 (dead time 500 ns) | 80 / 58 ns | 55 / 75 ns | 607 / 415 ns | 161 / 487 ns |
+| Losses between the DC links | 1.66 kW | 1.76 kW | 0.57 kW | 0.68 kW |
+| of which numerical damping, off-state conduction | 0.91, 0.10 kW | 0.97, 0.10 kW | 0.13, 0.10 kW | 0.25, 0.10 kW |
+| windings, cores, conduction | 0.20, 0.30, 0.16 kW | 0.22, 0.29, 0.18 kW | 0.00, 0.33, 0.00 kW | 0.01, 0.31, 0.01 kW |
+| η without numerical damping and off-state conduction | 99.74 % | 99.74 % | 98.69 % | 99.48 % |
+| Limit cycle of the DC input current (500 Hz) | ±3 A | ±0.6 A | ±4 A | ±3.4 A |
+| Magnetizing current offset (start) | 2.1 / −8.3 / 6.2 A | 1.6 / −8.5 / 6.8 A | 1.7 / −8.2 / 6.5 A | 1.6 / −8.1 / 6.5 A |
 
 The run loses about 1 kW more than the harmonic model at full load: the numerical damping and the
 off-state conduction of the switch model. The peak currents and the magnetizing current carry the DC
@@ -245,3 +245,11 @@ load.
   current; the flux offset of the start (8 A) brings some edges of bridge 1 to a negative switching
   current (minimum −1.6 A). In the converter a soft start with the first pulses at half width avoids
   the offset.
+- Run 04, voltage mismatch: battery_2 at soc 0.3, +0.25 pu, d = 0.96. Bridge 2 (the lower voltage)
+  commutates 16.0 A (harmonic model 15.9 A) against 15.6 A needed in 500 ns: the point sits on the
+  ZVS boundary of Sec. 5, as the map predicts (d = 0.95: from 29 % of the load). Bridge 1 has 50 A.
+  With the flux offset the edges of bridge 2 spread from −1.2 A to 20 A.
+
+The four runs confirm the harmonic model (currents and switching currents within 2 %, power within
+0.5 % once the numerical damping is accounted for) and the ZVS map in both directions, at light load
+and with different battery voltages.
