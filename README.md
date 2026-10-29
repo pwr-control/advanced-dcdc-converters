@@ -18,8 +18,10 @@ converter, plus an analytic/optimization study of a CLLLC resonant tank.
 
 1. Run `init_model.m` in the project folder: it sets the global timing (`fpwm = 4 kHz` for
    AFE/inverter, `3*fpwm = 12 kHz` for DAB and CLLC, double update), the application voltage
-   (690 V), the nominal powers (250 kW per DAB/CLLC stage, 750 kW for the DAB3), the hardware
-   data of every stage, the controller gains and the device set, then opens the model.
+   (690 V), the nominal powers (250 kW per DAB/CLLC stage), the hardware data of every stage,
+   the controller gains and the device set, then opens the model. `analysis_three_phase_dab` and
+   `cllc_dcx` keep their own numbers in a `param` structure (`private/*_param.m`) and put the
+   library on the path themselves (`private/library_setup.m`): see their READMEs.
 2. Simulate the `.slx`.
 3. Run the plotting / spectrum / loss scripts on the logged results (`sim_results*.mat`).
    Figures are exported as EPS into `figures/` (ignored by git).
@@ -34,7 +36,7 @@ Simulink subsystems or as C-Caller code (`use_*_ccaller`).
 | Folder | Content |
 |---|---|
 | [`analysis_single_phase_dab`](analysis_single_phase_dab) | Single-phase DAB, 250 kW: phase-shift modulator, ZVS analysis per device, losses, spectrum |
-| [`analysis_three_phase_dab`](analysis_three_phase_dab) | Three-phase DAB (DAB3), 750 kW: AC-side waveforms, spectrum, MP4 animations of the transformer quantities |
+| [`analysis_three_phase_dab`](analysis_three_phase_dab) | Three-phase DAB (DAB3), 1200 V / 1200 V, 250 kW, 10 kHz: sizing note, steady-state analysis, model with batteries on both sides and current loop, spectrum, MP4 animations of the transformer quantities |
 | [`analysis_resonant_cllc`](analysis_resonant_cllc) | Resonant CLLC converter: tank transfer function, simulation in both power directions, losses, HF transformer sizing |
 | [`analysis_single_phase_res_cllc`](analysis_single_phase_res_cllc) | Analytic state-space model of a CLLLC tank (800 V / 800 V, 250 kW) and an optimizer for the resonant elements and transformer |
 

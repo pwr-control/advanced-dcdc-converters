@@ -12,9 +12,9 @@ colore1 = [0.25 0.25 0.25];
 colore2 = [0.5 0.5 0.5];
 colore3 = [0.75 0.75 0.75];
 
-N1c = floor(glb_time.Nc/2);
-N2c = floor(glb_time.Nc);
-N3c = floor(glb_time.Nc - 4/glb_time.fPWM_AFE/glb_time.tc);
+N1c = floor(param.glb_time.Nc/2);
+N2c = floor(param.glb_time.Nc);
+N3c = floor(param.glb_time.Nc - 4/param.dab3.fs/param.glb_time.tc);   % last 4 periods of the transformer
 
 t1c = time_tc_sim(N1c);
 t2c = time_tc_sim(N2c);
