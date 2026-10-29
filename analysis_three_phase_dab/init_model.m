@@ -27,7 +27,7 @@
 % https://github.com/pwr-control/library when neither exists.
 
 clear;
-library_setup;              % pwr-control/library on the path, cloned next to this repository when missing (./private/library_setup.m)
+library_setup;              % pwr-control/library on the path, cloned next to this repository when missing (./private/library_setup.m) %[output:8ae21884]
 [model, options] = init_environment('three_phase_dab');
 param = struct();
 
@@ -41,7 +41,7 @@ clear overrides
 % save('sim_results_01.mat', '-v7.3', '-regexp', '_sim$', '^param$');
 % then dab3_run_check: powers, switching currents and losses of the logged window against the sizing
 %[text] ## Simulation
-param.sim.bench_case = 'forward';           % 'forward' (run 01), 'reverse', 'light', 'mismatch': current
+param.sim.bench_case = 'mismatch';           % 'forward' (run 01), 'reverse', 'light', 'mismatch': current
                                             % reference and batteries of ./private/dab3_param.m
 param.sim.simlength = 0.3;                  % [s] model StopTime ('forward': reverse power, then reversal at
                                             % 0.1 s, forward power at 1 pu from 0.2 s)
@@ -240,5 +240,8 @@ clear open_scopes k
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright"}
+%   data: {"layout":"onright","rightPanelPercent":8.4}
+%---
+%[output:8ae21884]
+%   data: {"dataType":"error","outputData":{"errorType":"runtime","text":"Unrecognized function or variable 'library_setup'."}}
 %---
